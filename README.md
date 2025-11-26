@@ -115,3 +115,155 @@ curl --location 'http://127.0.0.1:8000/api/v1/iam/auth/refresh/' \
 - websockets are used to send messages to the clients.
 - channels are used to send messages to the clients.
 - redis is used to handle the message broker.
+
+## APIs Request and Response Examples
+- User List API
+  - Request:
+  ```bash
+  curl --location --request GET 'http://127.0.0.1:8000/api/v1/iam/users' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' \
+  ```
+  - Response:
+  ```json
+  {
+    "success": true,
+    "data": {
+        "users": [
+            {
+                "id": "d78d7e76-2970-4c86-99f4-59ad6ea57d6e",
+                "date_joined": "2025-11-26T08:35:08.681141Z",
+                "is_active": true,
+                "first_name": "Jithu",
+                "last_name": "",
+                "email": "jithu@gmail.com"
+            },
+            {
+                "id": "a008ea88-ae63-4ca3-ac0b-5cb586ffe232",
+                "date_joined": "2025-11-26T08:38:06.269551Z",
+                "is_active": true,
+                "first_name": "Aleena",
+                "last_name": "",
+                "email": "aleen@gmail.com"
+            },
+            {
+                "id": "0847f29d-5419-40ef-a14e-ec7aadb4a797",
+                "date_joined": "2025-11-26T13:31:01.264052Z",
+                "is_active": true,
+                "first_name": "Salmo",
+                "last_name": "Jacob",
+                "email": "salmo@gmail.com"
+            }
+        ]
+    },
+    "pagination": {
+        "total_count": 3,
+        "total_pages": 1
+    }
+  }
+  ```
+- Collab Note List API
+  - Request:
+  ```bash
+  curl --location --request GET 'http://127.0.0.1:8000/api/v1/note/collab-notes' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' \
+  ```
+  - Response:
+  ```json
+  {
+    "success": true,
+    "data": {
+        "collab_notes": [
+            {
+                "id": "369bed5c-773f-42d4-8a24-9232fbf23edf",
+                "title": "sd",
+                "created_at": "Nov 26, 2025 03:14 PM",
+                "created_by": {
+                    "id": "0847f29d-5419-40ef-a14e-ec7aadb4a797",
+                    "full_name": "Salmo Jacob",
+                    "email": "salmo@gmail.com"
+                },
+                "content": "d"
+            }
+        ]
+    },
+    "pagination": {
+        "total_count": 1,
+        "total_pages": 1
+    }
+  }
+  ```
+- Collab Note Detail API
+  - Request:
+  ```bash
+  curl --location --request GET 'http://127.0.0.1:8000/api/v1/note/collab-notes/369bed5c-773f-42d4-8a24-9232fbf23edf' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' \
+  ```
+  - Response:
+  ```json
+  {
+    "success": true,
+    "data": {
+        "id": "8967b522-0064-42da-bc35-52b00085c1bc",
+        "title": "New Collab",
+        "versions": [
+            {
+                "id": "8a445543-05a6-4dce-a393-efc48ce4fc2f",
+                "content": "New Content",
+                "version": 1
+            }
+        ],
+        "created_at": "Nov 26, 2025 07:39 PM",
+        "modified_at": "Nov 26, 2025 07:39 PM",
+        "created_by": {
+            "id": "e914622c-31dd-46e4-b623-1735e86002cc",
+            "full_name": "Aleena Roy",
+            "email": "aleena@gmail.com"
+        },
+        "modified_by": null,
+        "collaborators": [
+            {
+                "id": "e914622c-31dd-46e4-b623-1735e86002cc",
+                "full_name": "Aleena Roy",
+                "email": "aleena@gmail.com"
+            }
+        ]
+    }
+  }
+  ```
+- Collab Note Create API
+  - Request:
+  ```bash
+  curl --location --request POST 'http://127.0.0.1:8000/api/v1/note/collab-notes' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' \
+  --data-raw '{
+    "title": "New Collab",
+    "content": ["New Content"]
+  }'
+  ```
+  - Response:
+  ```json 
+  {
+    "success": true,
+    "data": {
+        "id": "8967b522-0064-42da-bc35-52b00085c1bc"
+    }
+  }
+  ```
+- Colab Note Edit API
+  - Request:
+  ```bash
+  curl --location --request PUT 'http://127.0.0.1:8000/api/v1/note/collab-notes/8967b522-0064-42da-bc35-52b00085c1bc/versions/8a445543-05a6-4dce-a393-efc48ce4fc2f' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' \
+  --data-raw '{
+    "content": "New Content"
+  }'
+  ```
+  - Response:
+  ```json
+  {
+    "success": true,
+    "data": {
+        "id": "8967b522-0064-42da-bc35-52b00085c1bc"
+    }
+  }
+  ```
