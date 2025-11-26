@@ -1,0 +1,1 @@
+from iam.models.users import AppUser

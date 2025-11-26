@@ -1,0 +1,146 @@
+{% extends "base/base.html" %}
+
+{% block title %}Login &mdash; CollabNotes{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:420px;">
+    <h1 style="font-size:1.4rem; margin-bottom:0.35rem;">Welcome back</h1>
+    <p style="color:#9ca3af; font-size:0.9rem; margin-bottom:1.3rem;">
+        Sign in to access your collaborative notes.
+    </p>
+
+    <form id="login-form" novalidate>
+        <div style="margin-bottom:0.9rem;">
+            <label for="email" style="display:block; font-size:0.85rem; margin-bottom:0.25rem;">
+                Email
+            </label>
+            <input
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+                style="width:100%; padding:0.55rem 0.7rem; border-radius:0.6rem;
+                       border:1px solid rgba(148,163,184,0.7); background:rgba(15,23,42,0.9);
+                       color:#e5e7eb; font-size:0.9rem;"
+            >
+        </div>
+
+        <div style="margin-bottom:1.1rem;">
+            <label for="password" style="display:block; font-size:0.85rem; margin-bottom:0.25rem;">
+                Password
+            </label>
+            <input
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+                style="width:100%; padding:0.55rem 0.7rem; border-radius:0.6rem;
+                       border:1px solid rgba(148,163,184,0.7); background:rgba(15,23,42,0.9);
+                       color:#e5e7eb; font-size:0.9rem;"
+            >
+        </div>
+
+        <div id="login-error"
+             style="display:none; margin-bottom:0.9rem; padding:0.5rem 0.7rem; border-radius:0.6rem;
+                    border:1px solid rgba(248,113,113,0.8); color:#fecaca; background:rgba(127,29,29,0.5);
+                    font-size:0.8rem;">
+        </div>
+
+        <button
+            id="login-submit"
+            type="submit"
+            style="width:100%; padding:0.6rem 0.7rem; border:none; border-radius:0.8rem;
+                   background:linear-gradient(135deg, #38bdf8, #0ea5e9);
+                   color:#0f172a; font-weight:600; font-size:0.95rem; cursor:pointer;
+                   box-shadow:0 14px 30px rgba(15,23,42,0.9);"
+        >
+            Sign in
+        </button>
+
+        <p style="margin-top:0.9rem; color:#64748b; font-size:0.8rem;">
+            Use the email/password created via your Django management command.
+        </p>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    (function guardLogin() {
+        if (getAccessToken()) {
+            redirectToHome();
+        }
+    })();
+
+    async function loginUser({ email, password }) {
+        const response = await fetch("/api/v1/iam/token/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, password }),
+        });
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+            const message = payload && payload.detail
+                ? payload.detail
+                : (Array.isArray(payload) ? payload.join(", ") : "Invalid email or password.");
+            throw new Error(message);
+        }
+
+        const { access, refresh, user } = payload;
+        if (!access || !refresh) {
+            throw new Error("Unexpected response from authentication service.");
+        }
+
+        setAuthState({ access, refresh, user });
+        return payload;
+    }
+
+    (function bindLoginForm() {
+        const form = document.getElementById("login-form");
+        const submitButton = document.getElementById("login-submit");
+        const errorBox = document.getElementById("login-error");
+
+        if (!form || !submitButton) return;
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const emailInput = /** @type {HTMLInputElement} */(document.getElementById("email"));
+            const passwordInput = /** @type {HTMLInputElement} */(document.getElementById("password"));
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            errorBox.style.display = "none";
+            errorBox.textContent = "";
+
+            if (!email || !password) {
+                errorBox.textContent = "Email and password are required.";
+                errorBox.style.display = "block";
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = "Signing in…";
+
+            try {
+                await loginUser({ email, password });
+                redirectToHome();
+            } catch (error) {
+                const message = error instanceof Error ? error.message : "Login failed.";
+                errorBox.textContent = message;
+                errorBox.style.display = "block";
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = "Sign in";
+            }
+        });
+    })();
+</script>
+{% endblock %}

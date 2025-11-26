@@ -1,0 +1,886 @@
+{% extends "base/base.html" %}
+
+{% block title %}Home &mdash; CollabNotes{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:0.75rem; margin-bottom:0.9rem;">
+        <div>
+            <h1 style="font-size:1.4rem; margin-bottom:0.25rem;">
+                Welcome, <span id="home-user-name">there</span>
+            </h1>
+            <p style="color:#9ca3af; font-size:0.9rem;">
+                Here are your collaborative notes.
+            </p>
+        </div>
+        <div style="text-align:right; font-size:0.8rem; color:#64748b; display:flex; flex-direction:column; gap:0.35rem; align-items:flex-end;">
+            <span id="note-count-label">Loading notes…</span>
+            <button id="new-note-toggle"
+                    type="button"
+                    style="border-radius:999px; border:1px solid rgba(148,163,184,0.6);
+                           background:rgba(15,23,42,0.9); color:#e5e7eb; font-size:0.8rem;
+                           padding:0.25rem 0.8rem; cursor:pointer;">
+                + New note
+            </button>
+        </div>
+    </div>
+
+    <div id="new-note-form"
+         style="display:none; margin-bottom:0.9rem; border-radius:0.9rem; padding:0.9rem 1rem;
+                border:1px solid rgba(148,163,184,0.55); background:rgba(15,23,42,0.9);">
+        <h3 style="font-size:0.95rem; margin-bottom:0.35rem;">Create a new note</h3>
+        <div style="margin-bottom:0.45rem;">
+            <label for="new-note-title" style="display:block; font-size:0.8rem; margin-bottom:0.2rem; color:#9ca3af;">
+                Title
+            </label>
+            <input id="new-note-title"
+                   type="text"
+                   style="width:100%; padding:0.45rem 0.55rem; border-radius:0.6rem;
+                          border:1px solid rgba(148,163,184,0.7); background:rgba(15,23,42,0.95);
+                          color:#e5e7eb; font-size:0.86rem;">
+        </div>
+        <div style="margin-bottom:0.4rem;">
+            <label for="new-note-content" style="display:block; font-size:0.8rem; margin-bottom:0.2rem; color:#9ca3af;">
+                Content
+            </label>
+            <textarea id="new-note-content"
+                      style="width:100%; min-height:80px; padding:0.5rem 0.55rem; border-radius:0.6rem;
+                             border:1px solid rgba(148,163,184,0.7); background:rgba(15,23,42,0.95);
+                             color:#e5e7eb; font-size:0.86rem; resize:vertical;"></textarea>
+        </div>
+        <div id="new-note-error"
+             style="display:none; margin-bottom:0.45rem; font-size:0.8rem; color:#fecaca;"></div>
+        <div style="display:flex; gap:0.45rem; justify-content:flex-end;">
+            <button id="new-note-cancel"
+                    type="button"
+                    style="padding:0.4rem 0.9rem; border-radius:0.7rem;
+                           border:1px solid rgba(148,163,184,0.6);
+                           background:rgba(15,23,42,0.9); color:#e5e7eb; font-size:0.86rem; cursor:pointer;">
+                Cancel
+            </button>
+            <button id="new-note-save"
+                    type="button"
+                    style="padding:0.4rem 0.9rem; border-radius:0.7rem;
+                           border:none; background:linear-gradient(135deg,#38bdf8,#0ea5e9);
+                           color:#0f172a; font-size:0.86rem; font-weight:600; cursor:pointer;">
+                Save note
+            </button>
+        </div>
+    </div>
+
+    <div id="notes-container"
+         style="display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:0.9rem;">
+        <!-- Notes will be rendered here -->
+    </div>
+
+    <div id="notes-empty"
+         style="display:none; margin-top:0.5rem; border-radius:0.9rem; padding:1rem 1rem 1.1rem;
+                border:1px dashed rgba(148,163,184,0.6); background:rgba(15,23,42,0.7);">
+        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.4rem;">
+            No notes yet.
+        </p>
+        <p style="color:#64748b; font-size:0.82rem;">
+            Once you start creating collab notes, they will appear here.
+        </p>
+    </div>
+
+    <div id="notes-error"
+         style="display:none; margin-top:0.75rem; padding:0.6rem 0.8rem; border-radius:0.7rem;
+                border:1px solid rgba(248,113,113,0.8); background:rgba(127,29,29,0.4); color:#fecaca;
+                font-size:0.82rem;">
+    </div>
+</div>
+
+<div id="note-detail-overlay"
+     style="position:fixed; inset:0; background:rgba(15,23,42,0.85); display:none;
+            align-items:center; justify-content:center; z-index:40;">
+    <div style="max-width:720px; width:100%; padding:1.25rem;">
+        <div style="background:radial-gradient(circle at top left, rgba(56,189,248,0.05), rgba(15,23,42,0.98));
+                    border-radius:1.1rem; border:1px solid rgba(148,163,184,0.5);
+                    box-shadow:0 24px 60px rgba(0,0,0,0.9); padding:1.5rem 1.4rem 1.2rem;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem; margin-bottom:0.9rem;">
+                <div>
+                    <h2 id="detail-title" style="font-size:1.25rem; margin-bottom:0.25rem;">&nbsp;</h2>
+                    <p id="detail-meta" style="color:#9ca3af; font-size:0.8rem;"></p>
+                </div>
+                <div style="display:flex; gap:0.4rem; align-items:center;">
+                    <button id="detail-edit-toggle"
+                            style="border-radius:999px; border:1px solid rgba(148,163,184,0.6);
+                                   background:rgba(15,23,42,0.9); color:#e5e7eb; font-size:0.8rem;
+                                   padding:0.25rem 0.7rem; cursor:pointer;">
+                        Edit
+                    </button>
+                    <button id="detail-close"
+                            style="border-radius:999px; border:1px solid rgba(148,163,184,0.6);
+                                   background:rgba(15,23,42,0.9); color:#e5e7eb; font-size:0.8rem;
+                                   padding:0.25rem 0.6rem; cursor:pointer;">
+                        Close
+                    </button>
+                </div>
+            </div>
+
+            <div id="detail-body" style="max-height:420px; overflow:auto; padding-right:0.35rem;">
+                <!-- Edit form, versions and collaborators will be rendered here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="delete-confirm-overlay"
+     style="position:fixed; inset:0; background:rgba(15,23,42,0.9); display:none;
+            align-items:center; justify-content:center; z-index:50;">
+    <div style="max-width:420px; width:100%; padding:1.25rem;">
+        <div style="background:rgba(15,23,42,1); border-radius:0.9rem; border:1px solid rgba(148,163,184,0.6);
+                    box-shadow:0 20px 50px rgba(0,0,0,0.9); padding:1rem 1rem 0.85rem;">
+            <h3 style="font-size:1rem; margin-bottom:0.35rem; color:#e5e7eb;">Delete note</h3>
+            <p style="font-size:0.86rem; color:#cbd5f5; margin-bottom:0.3rem;">
+                Are you sure you want to delete this note?
+            </p>
+            <p style="font-size:0.84rem; color:#e5e7eb; margin-bottom:0.6rem;">
+                "<span id="delete-note-title"></span>"
+            </p>
+            <div id="delete-error"
+                 style="display:none; margin-bottom:0.5rem; font-size:0.8rem; color:#fecaca;"></div>
+            <div style="display:flex; justify-content:flex-end; gap:0.45rem;">
+                <button id="delete-cancel"
+                        type="button"
+                        style="padding:0.35rem 0.9rem; border-radius:0.7rem;
+                               border:1px solid rgba(148,163,184,0.6);
+                               background:rgba(15,23,42,0.9); color:#e5e7eb; font-size:0.84rem; cursor:pointer;">
+                    Cancel
+                </button>
+                <button id="delete-confirm"
+                        type="button"
+                        style="padding:0.35rem 0.9rem; border-radius:0.7rem;
+                               border:none; background:linear-gradient(135deg,#f97373,#ef4444);
+                               color:#0f172a; font-size:0.84rem; font-weight:600; cursor:pointer;">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    (function guardHome() {
+        const accessToken = getAccessToken();
+        if (!accessToken) {
+            redirectToLogin();
+        }
+    })();
+
+    (function renderHomeUserName() {
+        const el = document.getElementById("home-user-name");
+        if (!el) return;
+
+        const user = getUserFromStorage();
+        const firstName = user && user.first_name ? user.first_name : null;
+        const label = firstName || "there";
+        el.textContent = label;
+    })();
+
+    async function fetchCollabNotes() {
+        const accessToken = getAccessToken();
+        const notesContainer = document.getElementById("notes-container");
+        const emptyState = document.getElementById("notes-empty");
+        const errorBox = document.getElementById("notes-error");
+        const countLabel = document.getElementById("note-count-label");
+
+        if (!notesContainer || !emptyState || !errorBox || !countLabel) return;
+
+        notesContainer.innerHTML = "";
+        emptyState.style.display = "none";
+        errorBox.style.display = "none";
+        countLabel.textContent = "Loading notes…";
+
+        if (!accessToken) {
+            redirectToLogin();
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/v1/note/collab-notes/", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + accessToken,
+                },
+            });
+
+            if (response.status === 401) {
+                clearAuthState();
+                redirectToLogin();
+                return;
+            }
+
+            const payload = await response.json();
+
+            if (!response.ok || !payload.success) {
+                throw new Error("Failed to load notes.");
+            }
+
+            const notes = payload.data && payload.data.collab_notes ? payload.data.collab_notes : [];
+
+            if (!Array.isArray(notes) || notes.length === 0) {
+                notesContainer.innerHTML = "";
+                emptyState.style.display = "block";
+                countLabel.textContent = "0 notes";
+                return;
+            }
+
+            countLabel.textContent = notes.length === 1 ? "1 note" : notes.length + " notes";
+
+            notes.forEach((note) => {
+                const createdBy = note.created_by || {};
+                const card = document.createElement("div");
+                card.className = "collab-note-card";
+                card.dataset.noteId = note.id;
+                card.style.border = "1px solid rgba(148,163,184,0.5)";
+                card.style.borderRadius = "0.9rem";
+                card.style.padding = "0.75rem 0.8rem 0.7rem";
+                card.style.background = "rgba(15,23,42,0.9)";
+                card.style.textAlign = "left";
+                card.style.cursor = "pointer";
+                card.style.transition = "border-color 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease";
+
+                card.addEventListener("mouseenter", () => {
+                    card.style.borderColor = "rgba(56,189,248,0.85)";
+                    card.style.transform = "translateY(-1px)";
+                    card.style.boxShadow = "0 10px 25px rgba(15,23,42,0.9)";
+                });
+                card.addEventListener("mouseleave", () => {
+                    card.style.borderColor = "rgba(148,163,184,0.5)";
+                    card.style.transform = "translateY(0)";
+                    card.style.boxShadow = "none";
+                });
+
+                const contentPreview = (note.content || "").trim();
+
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; margin-bottom:0.15rem;">
+                        <div style="font-size:1.04rem; font-weight:600; color:#e0f2fe;">
+                            ${note.title || "Untitled note"}
+                        </div>
+                        <button type="button"
+                                class="note-delete-button"
+                                style="border-radius:999px; border:1px solid rgba(148,163,184,0.5);
+                                       background:rgba(15,23,42,0.95); color:#f97373; font-size:0.72rem;
+                                       padding:0.15rem 0.45rem; cursor:pointer;">
+                            Delete
+                        </button>
+                    </div>
+                    <div style="margin-bottom:0.4rem; font-size:0.82rem; color:#cbd5f5; max-height:3.1rem; overflow:hidden; text-overflow:ellipsis;">
+                        ${contentPreview ? contentPreview : "<span style='color:#64748b;'>No content yet.</span>"}
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; font-size:0.78rem; color:#9ca3af;">
+                        <div>
+                            <div>
+                                <span style="color:#6b7280;">Created by:</span>
+                                <span style="color:#e5e7eb;">${createdBy.full_name || "Unknown"}</span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div>
+                                <span style="color:#6b7280;">Created at:</span>
+                                <span>${note.created_at || ""}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                notesContainer.appendChild(card);
+
+                card.addEventListener("click", () => {
+                    openNoteDetail(note.id);
+                });
+
+                const deleteBtn = card.querySelector(".note-delete-button");
+                if (deleteBtn) {
+                    deleteBtn.addEventListener("click", (event) => {
+                        event.stopPropagation();
+                        openDeleteConfirm(note);
+                    });
+                }
+            });
+        } catch (error) {
+            errorBox.textContent = error instanceof Error ? error.message : "Something went wrong loading notes.";
+            errorBox.style.display = "block";
+            countLabel.textContent = "Failed to load notes";
+        }
+    }
+
+    async function openNoteDetail(noteId) {
+        const overlay = document.getElementById("note-detail-overlay");
+        const titleEl = document.getElementById("detail-title");
+        const metaEl = document.getElementById("detail-meta");
+        const bodyEl = document.getElementById("detail-body");
+        const editToggleBtn = document.getElementById("detail-edit-toggle");
+
+        if (!overlay || !titleEl || !metaEl || !bodyEl || !editToggleBtn) return;
+
+        const accessToken = getAccessToken();
+        if (!accessToken) {
+            redirectToLogin();
+            return;
+        }
+
+        overlay.style.display = "flex";
+        titleEl.textContent = "Loading…";
+        metaEl.textContent = "";
+        bodyEl.innerHTML = "<p style='color:#9ca3af; font-size:0.85rem;'>Fetching note details…</p>";
+
+        try {
+            const response = await fetch(`/api/v1/note/collab-notes/${noteId}/`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + accessToken,
+                },
+            });
+
+            if (response.status === 401) {
+                clearAuthState();
+                redirectToLogin();
+                return;
+            }
+
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                throw new Error("Failed to load note details.");
+            }
+
+            const note = payload.data;
+            titleEl.textContent = note.title || "Untitled note";
+
+            const createdBy = note.created_by || {};
+            const createdByLabel = createdBy.full_name || "Unknown";
+            const createdAtLabel = note.created_at || "";
+
+            metaEl.innerHTML = `
+                <span style="color:#6b7280;">Created by:</span>
+                <span style="color:#e5e7eb;">${createdByLabel}</span>
+                <span style="color:#6b7280;">&middot;</span>
+                <span style="color:#6b7280;">Created at:</span>
+                <span style="color:#cbd5f5;">${createdAtLabel}</span>
+            `;
+
+            const versions = Array.isArray(note.versions) ? note.versions : [];
+            const collaborators = Array.isArray(note.collaborators) ? note.collaborators : [];
+
+            // determine latest version (highest version number, fallback to last item)
+            let latestVersion = null;
+            if (versions.length > 0) {
+                latestVersion = versions.reduce((acc, v) => {
+                    if (!acc) return v;
+                    if (v.version != null && acc.version != null) {
+                        return v.version > acc.version ? v : acc;
+                    }
+                    return v; // fallback
+                }, null);
+            }
+
+            const latestContent = latestVersion && latestVersion.content ? latestVersion.content : "";
+
+            overlay.dataset.noteId = note.id;
+            overlay.dataset.versionId = latestVersion ? latestVersion.id : "";
+
+            let versionsHtml = "";
+            if (versions.length === 0) {
+                versionsHtml = "<p style='color:#9ca3af; font-size:0.85rem;'>No versions yet.</p>";
+            } else {
+                versionsHtml = `
+                    <div style="margin-bottom:0.75rem;">
+                        <h3 style="font-size:0.95rem; margin-bottom:0.3rem;">Versions</h3>
+                        <div style="display:flex; flex-direction:column; gap:0.4rem;">
+                            ${versions
+                                .map(
+                                    (v, index) => `
+                                        <div style="border-radius:0.6rem; border:1px solid rgba(148,163,184,0.5);
+                                                    padding:0.45rem 0.55rem; background:rgba(15,23,42,0.9);">
+                                            <div style="font-size:0.78rem; color:#9ca3af; margin-bottom:0.15rem;">
+                                                <span>Version ${v.version ?? index + 1}</span>
+                                            </div>
+                                            <div style="white-space:pre-wrap; font-size:0.86rem; color:#e5e7eb;">
+                                                ${v.content || ""}
+                                            </div>
+                                        </div>
+                                    `
+                                )
+                                .join("")}
+                        </div>
+                    </div>
+                `;
+            }
+
+            let collaboratorsHtml = "";
+            if (collaborators.length > 0) {
+                collaboratorsHtml = `
+                    <div style="margin-top:0.5rem;">
+                        <h3 style="font-size:0.95rem; margin-bottom:0.25rem;">Collaborators</h3>
+                        <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+                            ${collaborators
+                                .map(
+                                    (c) => `
+                                        <div style="border-radius:999px; border:1px solid rgba(148,163,184,0.6);
+                                                    padding:0.25rem 0.6rem; font-size:0.78rem; color:#e5e7eb;
+                                                    background:rgba(15,23,42,0.95);">
+                                            ${c.full_name || "Unknown"}
+                                        </div>
+                                    `
+                                )
+                                .join("")}
+                        </div>
+                    </div>
+                `;
+            }
+
+            bodyEl.innerHTML = versionsHtml + collaboratorsHtml;
+
+            // bind edit toggle + save handler
+            editToggleBtn.disabled = !latestVersion;
+            editToggleBtn.textContent = "Edit";
+
+            editToggleBtn.onclick = () => {
+                if (!latestVersion) return;
+
+                // if already in edit mode, do nothing (or could collapse, but spec says only open on click)
+                const existingForm = document.getElementById("edit-content");
+                if (existingForm) return;
+
+                const editWrapper = document.createElement("div");
+                editWrapper.style.marginBottom = "0.9rem";
+                editWrapper.innerHTML = `
+                    <h3 style="font-size:0.95rem; margin-bottom:0.35rem;">Edit latest version</h3>
+                    <textarea id="edit-content"
+                              style="width:100%; min-height:96px; max-height:180px; padding:0.6rem 0.7rem;
+                                     border-radius:0.7rem; border:1px solid rgba(148,163,184,0.7);
+                                     background:rgba(15,23,42,0.95); color:#e5e7eb; font-size:0.88rem;
+                                     resize:vertical;">${latestContent}</textarea>
+                    <div id="edit-error"
+                         style="display:none; margin-top:0.4rem; font-size:0.8rem; color:#fecaca;"></div>
+                    <div style="margin-top:0.55rem; display:flex; gap:0.45rem;">
+                        <button id="edit-save"
+                                style="padding:0.4rem 0.9rem; border-radius:0.7rem;
+                                       border:none; background:linear-gradient(135deg,#38bdf8,#0ea5e9);
+                                       color:#0f172a; font-size:0.86rem; font-weight:600; cursor:pointer;">
+                            Save new version
+                        </button>
+                        <button id="edit-cancel"
+                                style="padding:0.4rem 0.9rem; border-radius:0.7rem;
+                                       border:1px solid rgba(148,163,184,0.6);
+                                       background:rgba(15,23,42,0.9); color:#e5e7eb; font-size:0.86rem; cursor:pointer;">
+                            Cancel
+                        </button>
+                    </div>
+                `;
+
+                bodyEl.prepend(editWrapper);
+
+                const saveBtn = document.getElementById("edit-save");
+                const cancelBtn = document.getElementById("edit-cancel");
+                const contentInput = document.getElementById("edit-content");
+                const errorEl = document.getElementById("edit-error");
+
+                if (saveBtn && cancelBtn && contentInput && errorEl) {
+                    cancelBtn.addEventListener("click", () => {
+                        editWrapper.remove();
+                    });
+
+                    saveBtn.addEventListener("click", async () => {
+                        const raw = contentInput.value || "";
+                        const trimmed = raw.trim();
+                        errorEl.style.display = "none";
+                        errorEl.textContent = "";
+
+                        if (!trimmed) {
+                            errorEl.textContent = "Content cannot be blank.";
+                            errorEl.style.display = "block";
+                            return;
+                        }
+
+                        if (trimmed === latestContent.trim()) {
+                            errorEl.textContent = "No changes to save.";
+                            errorEl.style.display = "block";
+                            return;
+                        }
+
+                        saveBtn.disabled = true;
+                        saveBtn.textContent = "Saving…";
+
+                        try {
+                            const putResponse = await fetch(`/api/v1/note/collab-notes/${noteId}/versions/${latestVersion.id}/`, {
+                                method: "PUT",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "Authorization": "Bearer " + accessToken,
+                                },
+                                body: JSON.stringify({ content: trimmed }),
+                            });
+
+                            const putPayload = await putResponse.json();
+
+                            if (!putResponse.ok || !putPayload.success) {
+                                const msg = (putPayload && putPayload.error) || "Failed to save new version.";
+                                throw new Error(msg);
+                            }
+
+                            // refresh list + detail
+                            fetchCollabNotes();
+                            openNoteDetail(noteId);
+                        } catch (error) {
+                            errorEl.textContent = error instanceof Error ? error.message : "Failed to save new version.";
+                            errorEl.style.display = "block";
+                        } finally {
+                            saveBtn.disabled = false;
+                            saveBtn.textContent = "Save new version";
+                        }
+                    });
+                }
+            };
+        } catch (error) {
+            bodyEl.innerHTML = `<p style="color:#fecaca; font-size:0.85rem;">${
+                error instanceof Error ? error.message : "Failed to load note details."
+            }</p>`;
+        }
+    }
+
+    function initNewNoteForm() {
+        const toggleBtn = document.getElementById("new-note-toggle");
+        const formEl = document.getElementById("new-note-form");
+        const titleInput = document.getElementById("new-note-title");
+        const contentInput = document.getElementById("new-note-content");
+        const errorEl = document.getElementById("new-note-error");
+        const cancelBtn = document.getElementById("new-note-cancel");
+        const saveBtn = document.getElementById("new-note-save");
+
+        if (!toggleBtn || !formEl || !titleInput || !contentInput || !errorEl || !cancelBtn || !saveBtn) {
+            return;
+        }
+
+        function resetForm() {
+            titleInput.value = "";
+            contentInput.value = "";
+            errorEl.style.display = "none";
+            errorEl.textContent = "";
+        }
+
+        toggleBtn.addEventListener("click", () => {
+            if (formEl.style.display === "none" || !formEl.style.display) {
+                formEl.style.display = "block";
+                titleInput.focus();
+            } else {
+                formEl.style.display = "none";
+                resetForm();
+            }
+        });
+
+        cancelBtn.addEventListener("click", () => {
+            formEl.style.display = "none";
+            resetForm();
+        });
+
+        saveBtn.addEventListener("click", async () => {
+            const accessToken = getAccessToken();
+            if (!accessToken) {
+                redirectToLogin();
+                return;
+            }
+
+            const title = (titleInput.value || "").trim();
+            const content = (contentInput.value || "").trim();
+
+            errorEl.style.display = "none";
+            errorEl.textContent = "";
+
+            if (!title) {
+                errorEl.textContent = "Title is required.";
+                errorEl.style.display = "block";
+                return;
+            }
+
+            if (!content) {
+                errorEl.textContent = "Content is required.";
+                errorEl.style.display = "block";
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = "Saving…";
+
+            try {
+                const response = await fetch("/api/v1/note/collab-notes/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + accessToken,
+                    },
+                    body: JSON.stringify({
+                        title,
+                        content: [content],
+                    }),
+                });
+
+                if (response.status === 401) {
+                    clearAuthState();
+                    redirectToLogin();
+                    return;
+                }
+
+                const payload = await response.json();
+                if (!response.ok || !payload.success) {
+                    const msg = (payload && payload.error) || "Failed to create note.";
+                    throw new Error(msg);
+                }
+
+                formEl.style.display = "none";
+                resetForm();
+                fetchCollabNotes();
+            } catch (error) {
+                errorEl.textContent = error instanceof Error ? error.message : "Failed to create note.";
+                errorEl.style.display = "block";
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = "Save note";
+            }
+        });
+    }
+
+    function initDeleteOverlay() {
+        const overlay = document.getElementById("delete-confirm-overlay");
+        const titleSpan = document.getElementById("delete-note-title");
+        const cancelBtn = document.getElementById("delete-cancel");
+        const confirmBtn = document.getElementById("delete-confirm");
+        const errorEl = document.getElementById("delete-error");
+
+        if (!overlay || !titleSpan || !cancelBtn || !confirmBtn || !errorEl) return;
+
+        function close() {
+            overlay.style.display = "none";
+            overlay.removeAttribute("data-note-id");
+            errorEl.style.display = "none";
+            errorEl.textContent = "";
+        }
+
+        cancelBtn.addEventListener("click", () => {
+            close();
+        });
+
+        confirmBtn.addEventListener("click", async () => {
+            const noteId = overlay.getAttribute("data-note-id");
+            const accessToken = getAccessToken();
+
+            if (!noteId || !accessToken) {
+                redirectToLogin();
+                return;
+            }
+
+            errorEl.style.display = "none";
+            errorEl.textContent = "";
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = "Deleting…";
+
+            try {
+                const response = await fetch(`/api/v1/note/collab-notes/${noteId}/`, {
+                    method: "DELETE",
+                    headers: {
+                        "Authorization": "Bearer " + accessToken,
+                    },
+                });
+
+                if (response.status === 401) {
+                    clearAuthState();
+                    redirectToLogin();
+                    return;
+                }
+
+                if (!response.ok && response.status !== 204) {
+                    const payload = await response.json().catch(() => null);
+                    const msg = (payload && payload.error) || "Failed to delete note.";
+                    throw new Error(msg);
+                }
+
+                close();
+                fetchCollabNotes();
+            } catch (error) {
+                errorEl.textContent = error instanceof Error ? error.message : "Failed to delete note.";
+                errorEl.style.display = "block";
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = "Delete";
+            }
+        });
+
+        overlay.addEventListener("click", (event) => {
+            if (event.target === overlay) close();
+        });
+    }
+
+    function openDeleteConfirm(note) {
+        const overlay = document.getElementById("delete-confirm-overlay");
+        const titleSpan = document.getElementById("delete-note-title");
+        const errorEl = document.getElementById("delete-error");
+        if (!overlay || !titleSpan || !errorEl) return;
+
+        titleSpan.textContent = note.title || "Untitled note";
+        overlay.setAttribute("data-note-id", note.id);
+        errorEl.style.display = "none";
+        errorEl.textContent = "";
+        overlay.style.display = "flex";
+    }
+
+    function initListWebSocket() {
+        const notesContainer = document.getElementById("notes-container");
+        const emptyState = document.getElementById("notes-empty");
+        const countLabel = document.getElementById("note-count-label");
+        const errorBox = document.getElementById("notes-error");
+
+        if (!notesContainer || !emptyState || !countLabel || !errorBox) return;
+
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const wsUrl = `${protocol}://${window.location.host}/ws/collab/list/`;
+
+        let socket = new WebSocket(wsUrl);
+
+        socket.onmessage = (event) => {
+            try {
+                const payload = JSON.parse(event.data);
+                if (!payload || !payload.type) return;
+
+                if (payload.type === "note_created" && payload.note) {
+                    errorBox.style.display = "none";
+                    const note = payload.note;
+                    // if we already have this card, skip
+                    const existing = notesContainer.querySelector(`[data-note-id="${note.id}"]`);
+                    if (existing) return;
+
+                    // if list was empty, hide empty state
+                    emptyState.style.display = "none";
+
+                    // create a new card using same structure as initial render
+                    const createdBy = note.created_by || {};
+                    const card = document.createElement("div");
+                    card.className = "collab-note-card";
+                    card.dataset.noteId = note.id;
+                    card.style.border = "1px solid rgba(148,163,184,0.5)";
+                    card.style.borderRadius = "0.9rem";
+                    card.style.padding = "0.75rem 0.8rem 0.7rem";
+                    card.style.background = "rgba(15,23,42,0.9)";
+                    card.style.textAlign = "left";
+                    card.style.cursor = "pointer";
+                    card.style.transition = "border-color 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease";
+
+                    card.addEventListener("mouseenter", () => {
+                        card.style.borderColor = "rgba(56,189,248,0.85)";
+                        card.style.transform = "translateY(-1px)";
+                        card.style.boxShadow = "0 10px 25px rgba(15,23,42,0.9)";
+                    });
+                    card.addEventListener("mouseleave", () => {
+                        card.style.borderColor = "rgba(148,163,184,0.5)";
+                        card.style.transform = "translateY(0)";
+                        card.style.boxShadow = "none";
+                    });
+
+                    const contentPreview = (note.content || "").trim();
+
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; margin-bottom:0.15rem;">
+                            <div style="font-size:1.04rem; font-weight:600; color:#e0f2fe;">
+                                ${note.title || "Untitled note"}
+                            </div>
+                            <button type="button"
+                                    class="note-delete-button"
+                                    style="border-radius:999px; border:1px solid rgba(148,163,184,0.5);
+                                           background:rgba(15,23,42,0.95); color:#f97373; font-size:0.72rem;
+                                           padding:0.15rem 0.45rem; cursor:pointer;">
+                                Delete
+                            </button>
+                        </div>
+                        <div style="margin-bottom:0.4rem; font-size:0.82rem; color:#cbd5f5; max-height:3.1rem; overflow:hidden; text-overflow:ellipsis;">
+                            ${contentPreview ? contentPreview : "<span style='color:#64748b;'>No content yet.</span>"}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; font-size:0.78rem; color:#9ca3af;">
+                            <div>
+                                <div>
+                                    <span style="color:#6b7280;">Created by:</span>
+                                    <span style="color:#e5e7eb;">${createdBy.full_name || "Unknown"}</span>
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div>
+                                    <span style="color:#6b7280;">Created at:</span>
+                                    <span>${note.created_at || ""}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    notesContainer.prepend(card);
+                    card.addEventListener("click", () => openNoteDetail(note.id));
+
+                    const deleteBtn = card.querySelector(".note-delete-button");
+                    if (deleteBtn) {
+                        deleteBtn.addEventListener("click", (event) => {
+                            event.stopPropagation();
+                            openDeleteConfirm(note);
+                        });
+                    }
+
+                    // update counter
+                    const currentCards = notesContainer.querySelectorAll(".collab-note-card").length;
+                    countLabel.textContent = currentCards === 1 ? "1 note" : `${currentCards} notes`;
+                }
+
+                if (payload.type === "note_deleted" && payload.note_id) {
+                    errorBox.style.display = "none";
+                    const card = notesContainer.querySelector(`[data-note-id="${payload.note_id}"]`);
+                    if (card && card.parentNode) {
+                        card.parentNode.removeChild(card);
+                    }
+                    const currentCards = notesContainer.querySelectorAll(".collab-note-card").length;
+                    if (currentCards === 0) {
+                        emptyState.style.display = "block";
+                        countLabel.textContent = "0 notes";
+                    } else {
+                        countLabel.textContent = currentCards === 1 ? "1 note" : `${currentCards} notes`;
+                    }
+                }
+            } catch (_) {
+                // ignore malformed messages
+            }
+        };
+
+        socket.onclose = () => {
+            // optional: attempt lightweight reconnect after delay
+            setTimeout(() => {
+                initListWebSocket();
+            }, 3000);
+        };
+    }
+
+    (function initDetailOverlay() {
+        const overlay = document.getElementById("note-detail-overlay");
+        const closeBtn = document.getElementById("detail-close");
+        if (!overlay || !closeBtn) return;
+
+        function close() {
+            overlay.style.display = "none";
+        }
+
+        closeBtn.addEventListener("click", close);
+        overlay.addEventListener("click", (event) => {
+            if (event.target === overlay) {
+                close();
+            }
+        });
+    })();
+
+    (function initHomeData() {
+        fetchCollabNotes();
+        initNewNoteForm();
+        initDeleteOverlay();
+        initListWebSocket();
+    })();
+</script>
+{% endblock %}
